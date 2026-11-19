@@ -86,3 +86,12 @@ The assistant checks the requested slot first. The booking tool will reject a bo
 - Never use real patient data with this demo. A real deployment requires privacy/security review, identity and role controls, audit logging, retention controls, and transactional integration design.
 - The assistant supports administrative work only; it does not provide medical advice or make clinical decisions.
 
+## Future Work
+
+- Replace the fictional SQLite data with approved clinic calendar and billing integrations, starting in a sandbox or read-only environment.
+- Add staff sign-in, role-based access, and patient-record authorization checks before exposing any clinic data or enabling appointment changes.
+- Add audit logging, privacy and retention controls, secure configuration, and operational monitoring.
+- Add explicit confirmation and recovery flows for booking or rescheduling, including duplicate-request and concurrent-booking handling.
+- Evaluate tool selection, date handling, financial calculations, and failure responses across representative requests and supported model versions.
+- Assess hardware and response-time requirements for Llama 3.3 70B and document a smaller local-model option if the deployment machine cannot run it comfortably.
+
