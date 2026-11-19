@@ -38,11 +38,11 @@ Creates a booking or updates an existing appointment. The agent must first call 
 
 ```json
 {
-  "patient_id": "string",
-  "doctor_id": "string",
+  "patient_name": "exact name in the demo directory",
+  "doctor_name": "exact name in the demo directory",
   "starts_at": "ISO 8601 date-time",
   "ends_at": "ISO 8601 date-time",
-  "appointment_id": "optional string; required when rescheduling"
+  "appointment_id": "optional integer; required when rescheduling"
 }
 ```
 
@@ -52,7 +52,7 @@ Creates a booking or updates an existing appointment. The agent must first call 
 {
   "success": "boolean",
   "action": "booked | rescheduled",
-  "appointment_reference": "minimum necessary identifier",
+  "appointment_id": "integer",
   "starts_at": "ISO 8601 date-time",
   "error": "optional string"
 }
@@ -68,7 +68,7 @@ Performs an approved, read-only billing lookup. It is a scoped application query
 
 ```json
 {
-  "patient_id": "string",
+  "patient_name": "exact name in the demo billing records",
   "service_date": "optional YYYY-MM-DD"
 }
 ```
