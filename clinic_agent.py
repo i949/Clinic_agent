@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import json
 import os
 import re
@@ -10,13 +11,27 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
+
+ROOT = Path(__file__).resolve().parent
+load_dotenv(ROOT / ".env")
+
 from llama_index.core.agent.workflow import AgentWorkflow
 from llama_index.core.workflow import Context
 from llama_index.llms.ollama import Ollama
 
 
-ROOT = Path(__file__).resolve().parent
-DB_PATH = Path(os.environ.get("CLINIC_DB", ROOT / "clinic_demo.db"))
+def _configured_path(variable: str, default: str | Path) -> Path:
+    path = Path(os.environ.get(variable, str(default))).expanduser()
+    return path if path.is_absolute() else ROOT / path
+
+
+DB_PATH = _configured_path("CLINIC_DB", "clinic_demo.db")
+DOCTORS_CSV = _configured_path("DOCTORS_CSV", "data/doctors.csv")
+PATIENTS_CSV = _configured_path("PATIENTS_CSV", "data/patients.csv")
+APPOINTMENTS_CSV = _configured_path("APPOINTMENTS_CSV", "data/appointments.csv")
+BILLING_CSV = _configured_path("BILLING_CSV", "data/billing.csv")
+PAYMENTS_CSV = _configured_path("PAYMENTS_CSV", "data/payments.csv")
 MODEL_NAME = os.environ.get("OLLAMA_MODEL", "llama3.3")
 OLLAMA_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 
@@ -66,17 +81,34 @@ def initialize_demo_database(db_path: Path = DB_PATH) -> None:
             amount REAL NOT NULL
         );
         """)
-        db.executemany("INSERT OR IGNORE INTO doctors(name) VALUES(?)", [("Dr. Noor",), ("Dr. Omar",)])
-        db.executemany("INSERT OR IGNORE INTO patients(name) VALUES(?)", [("Demo Patient A",), ("Demo Patient B",)])
+        if db.execute("SELECT COUNT(*) FROM doctors").fetchone()[0] == 0:
+            with DOCTORS_CSV.open(encoding="utf-8-sig", newline="") as source:
+                db.executemany("INSERT INTO doctors(name) VALUES(?)",
+                               [(row["name"],) for row in csv.DictReader(source)])
+        if db.execute("SELECT COUNT(*) FROM patients").fetchone()[0] == 0:
+            with PATIENTS_CSV.open(encoding="utf-8-sig", newline="") as source:
+                db.executemany("INSERT INTO patients(name) VALUES(?)",
+                               [(row["name"],) for row in csv.DictReader(source)])
+        if db.execute("SELECT COUNT(*) FROM appointments").fetchone()[0] == 0:
+            with APPOINTMENTS_CSV.open(encoding="utf-8-sig", newline="") as source:
+                db.executemany(
+                    "INSERT INTO appointments(patient_name,doctor_name,starts_at,ends_at,status) VALUES(?,?,?,?,?)",
+                    [(row["patient_name"], row["doctor_name"], row["starts_at"], row["ends_at"], row["status"])
+                     for row in csv.DictReader(source)],
+                )
         if db.execute("SELECT COUNT(*) FROM billing").fetchone()[0] == 0:
-            today = date.today().isoformat()
-            db.executemany(
-                "INSERT INTO billing(patient_name,service_date,description,amount,paid) VALUES(?,?,?,?,?)",
-                [("Demo Patient A", today, "Consultation", 75.0, 75.0),
-                 ("Demo Patient B", today, "Follow-up", 50.0, 20.0)],
-            )
-            now = datetime.now().isoformat(timespec="seconds")
-            db.executemany("INSERT INTO payments(paid_at,amount) VALUES(?,?)", [(now, 75.0), (now, 20.0)])
+            with BILLING_CSV.open(encoding="utf-8-sig", newline="") as source:
+                db.executemany(
+                    "INSERT INTO billing(patient_name,service_date,description,amount,paid) VALUES(?,?,?,?,?)",
+                    [(row["patient_name"], row["service_date"], row["description"],
+                      float(row["amount"]), float(row["paid"])) for row in csv.DictReader(source)],
+                )
+        if db.execute("SELECT COUNT(*) FROM payments").fetchone()[0] == 0:
+            with PAYMENTS_CSV.open(encoding="utf-8-sig", newline="") as source:
+                db.executemany(
+                    "INSERT INTO payments(paid_at,amount) VALUES(?,?)",
+                    [(row["paid_at"], float(row["amount"])) for row in csv.DictReader(source)],
+                )
 
 
 def _as_local_datetime(value: str) -> datetime:

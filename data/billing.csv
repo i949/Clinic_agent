@@ -1,0 +1,4 @@
+patient_name,service_date,description,amount,paid
+Demo Patient A,2026-11-19,Consultation,75.00,75.00
+Demo Patient B,2026-11-19,Follow-up,50.00,20.00
+

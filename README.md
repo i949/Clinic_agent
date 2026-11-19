@@ -1,16 +1,18 @@
 # Clinic Appointment and Finance Agent
 
-A LlamaIndex agent demo for helping clinic staff check appointment availability, manage bookings, retrieve limited billing details, and prepare daily financial summaries.
+**An agentic AI assistant concept for clinic appointment scheduling, billing lookups, and daily financial summaries.**
 
-> **Project scope:** The runnable demo uses a local SQLite database containing fictional records only. It does not connect to a real clinic, patient record system, calendar, or accounting service. Do not enter real patient information.
+This project helps authorized clinic staff check a doctor's availability, book or reschedule appointments, retrieve limited billing details, and prepare daily financial reports. LlamaIndex coordinates the agent and tools; Ollama serves the selected local LLM.
+
+> **Project scope:** This is an implementation prototype using fictional sample records. It does not connect to a real clinic calendar or patient billing system and must not be used with real patient information.
 
 ## Assignment deliverables
 
-1. **Use case:** Clinic appointment and financial management assistant.
-2. **LLM and provider:** Llama 3.3 70B Instruct served locally through Ollama.
-3. **Tools:** Availability check, appointment booking or rescheduling, read-only billing lookup, and daily financial report generation.
-4. **System prompt:** A complete instruction set for tool selection, scheduling order, privacy, and reliable responses.
-5. **Implementation:** A LlamaIndex `AgentWorkflow` using function tools and a local Ollama model.
+1. **Use case:** Automated clinic appointment and financial management assistant.
+2. **LLM and provider:** Llama 3.3 70B Instruct served locally by Ollama.
+3. **Tools:** Availability check, appointment booking/rescheduling, read-only billing lookup, and daily financial report.
+4. **System prompt:** Instructions for tool use, scheduling order, privacy, and reliable responses.
+5. **Implementation:** LlamaIndex `AgentWorkflow` with typed function tools.
 
 ## Repository structure
 
@@ -19,57 +21,40 @@ Clinic_agent/
 ├── README.md
 ├── clinic_agent.py
 ├── requirements.txt
+├── .env.example
 ├── .gitignore
+├── data/
+│   ├── doctors.csv
+│   ├── patients.csv
+│   ├── appointments.csv
+│   ├── billing.csv
+│   └── payments.csv
 └── docs/
     ├── 01_brainstorming_and_use_case.md
     ├── 02_llm_and_provider.md
     ├── 03_tool_specifications.md
     ├── 04_agent_workflow.md
-    └── 05_system_prompt.md
+    ├── 05_system_prompt.md
+    └── 06_llamaindex_implementation.md
 ```
 
-## How the agent works
-
-```text
-Staff request → LlamaIndex AgentWorkflow → clinic tools → verified result → staff response
-```
-
-The tools are ordinary typed Python functions that LlamaIndex exposes to the agent. The code also enforces two important rules: booking needs an availability check for the same slot, and the daily report tool is disabled unless the request explicitly asks for a daily summary or reconciliation.
-
-## Run locally
-
-1. Install [Ollama](https://ollama.com/download).
-2. Pull the selected model and install the Python packages:
-
-   ```bash
-   ollama pull llama3.3
-   python -m venv .venv
-   # Activate the virtual environment, then:
-   pip install -r requirements.txt
-   python clinic_agent.py
-   ```
-
-The demo creates `clinic_demo.db` with fictional records the first time it runs. Set `OLLAMA_MODEL`, `OLLAMA_BASE_URL`, or `CLINIC_DB` to override defaults. Type `quit` to exit.
-
-The default Ollama `llama3.3` model is about 43 GB in its listed quantization, so confirm your machine has enough memory and disk space before downloading it. See the [Ollama model page](https://ollama.com/library/llama3.3).
-
-## Example request
+## Quick overview
 
 A staff member may ask:
 
-> “Check whether Dr. Noor is free tomorrow at 10:00, then book Salma for a 30-minute visit.”
+> “Check whether Dr. Noor is available tomorrow at 10:00, and book Demo Patient A if the slot is free.”
 
-The assistant checks the requested slot first. The booking tool will reject a booking unless that exact doctor and time range were checked and available. It then rechecks for conflicts before writing to the local demo database.
+The agent checks availability first. It books only after the exact doctor and time range have been checked and found available, then reports the confirmed result.
 
 ## Important design principles
 
-- **Verify before answering:** availability, bookings, and financial figures must come from tools.
-- **Availability before booking:** scheduling always starts with a calendar check.
-- **Read-only billing:** the billing lookup cannot modify records.
-- **Explicit report requests:** generate a financial report only when staff explicitly ask for a daily summary or reconciliation.
-- **Privacy:** return only the information needed; never reveal credentials or unnecessary patient identifiers.
-- **Honest results:** report empty results and tool failures clearly; never claim an action succeeded without confirmation.
-- **Human responsibility:** this assistant supports administrative work and does not provide medical advice or make clinical decisions.
+- **Verify before answering:** availability, appointment changes, and financial figures must come from tools.
+- **Availability before booking:** the booking tool requires a successful check for the same slot and checks conflicts again before writing.
+- **Read-only billing lookup:** `query_database` can return limited billing fields and cannot modify records.
+- **Explicit daily reports:** call `generate_financial_report` only for an explicit daily summary or reconciliation request.
+- **Privacy:** do not expose unnecessary patient identifiers, credentials, or sensitive records.
+- **Honest results:** explain unavailable information and tool failures; never claim an action succeeded without confirmation.
+- **Administrative scope:** the assistant does not provide medical advice or make clinical decisions.
 
 ## Detailed documentation
 
@@ -77,21 +62,55 @@ The assistant checks the requested slot first. The booking tool will reject a bo
 - [LLM and provider selection](docs/02_llm_and_provider.md)
 - [Tool specifications](docs/03_tool_specifications.md)
 - [Agent workflow](docs/04_agent_workflow.md)
-- [Complete system prompt](docs/05_system_prompt.md)
+- [System prompt](docs/05_system_prompt.md)
+- [LlamaIndex implementation](docs/06_llamaindex_implementation.md)
 
-## Safety and limits
+## LlamaIndex implementation
 
-- The booking and billing tools operate only on the fictional local demo database.
-- This prototype has no authentication, staff authorization, production audit trail, or clinic system integration.
-- Never use real patient data with this demo. A real deployment requires privacy/security review, identity and role controls, audit logging, retention controls, and transactional integration design.
-- The assistant supports administrative work only; it does not provide medical advice or make clinical decisions.
+The Python demo uses LlamaIndex's agent workflow with typed functions for the clinic tools. It follows the notebook's `AgentWorkflow` pattern and connects to Ollama using the local LLM integration. The notebook demonstrates other provider integrations too; this project keeps Ollama to match the assignment brief.
+
+The clinic tools operate on a local SQLite database initialized from the fictional CSV files in `data/`. The implementation does not include the reference project's finance-specific tools or document RAG because those do not match this clinic task's requested tools.
+
+## Run locally
+
+1. Install [Ollama](https://ollama.com/download).
+2. Pull the model and install the Python dependencies:
+
+   ```powershell
+   ollama pull llama3.3
+   python -m venv .venv
+   .venv\Scripts\Activate.ps1
+   pip install -r requirements.txt
+   Copy-Item .env.example .env
+   python clinic_agent.py
+   ```
+
+The demo creates `clinic_demo.db` from the CSV files on first run. Type `quit` to exit. The local database is ignored by Git. If you change the sample CSV files after the database has been created, remove the demo database to reload the sample data.
+
+The listed default Ollama model is about 43 GB in its default quantization. Confirm you have enough memory and storage before downloading it. See the [Ollama model page](https://ollama.com/library/llama3.3).
+
+## Example scenario
+
+The included fictional records contain two demo patients, two doctors, sample invoices, and payments dated November 19, 2026. The appointment fixture starts empty, so the demo calendar initially has no scheduled slots. These values only demonstrate the tool flow; they are not real clinic data.
+
+## Safety and limitations
+
+- The CSV records and SQLite database are fictional and local.
+- This prototype has no authentication, role-based access, production audit logging, or clinic integration.
+- Never put real patient records in the sample files or the demo database.
+- A real deployment requires clinic privacy/security review, staff identity and authorization, audit and retention controls, and transactional integration testing.
+- The assistant supports administrative tasks only.
 
 ## Future Work
 
-- Replace the fictional SQLite data with approved clinic calendar and billing integrations, starting in a sandbox or read-only environment.
-- Add staff sign-in, role-based access, and patient-record authorization checks before exposing any clinic data or enabling appointment changes.
+- Replace sample records with approved calendar and billing integrations, starting in a sandbox or read-only environment.
+- Add staff sign-in, role-based access, and patient-record authorization checks before exposing clinic data or enabling appointment changes.
 - Add audit logging, privacy and retention controls, secure configuration, and operational monitoring.
-- Add explicit confirmation and recovery flows for booking or rescheduling, including duplicate-request and concurrent-booking handling.
-- Evaluate tool selection, date handling, financial calculations, and failure responses across representative requests and supported model versions.
-- Assess hardware and response-time requirements for Llama 3.3 70B and document a smaller local-model option if the deployment machine cannot run it comfortably.
+- Add explicit confirmation and recovery flows for bookings and rescheduling, including duplicate-request and concurrent-booking handling.
+- Evaluate tool selection, date handling, financial calculations, and failure responses across supported model versions.
+- Assess hardware and response-time needs for Llama 3.3 70B and document a smaller local-model option if needed.
+
+## Status
+
+**Runnable implementation prototype.** Production clinic integrations, authentication, operational safeguards, and deployment remain future work.
 
